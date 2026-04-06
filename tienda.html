@@ -22,6 +22,32 @@
 
     <div class="container">
         <h2>Todas las camisetas</h2>
+        
+        <!-- BARRA DE BÚSQUEDA Y FILTROS -->
+        <div class="filtros-container">
+            <div class="busqueda-box">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre, descripción o etiquetas..." class="search-input">
+            </div>
+            
+            <div class="filtros-box">
+                <div class="filtro-group">
+                    <label>💰 Precio mínimo</label>
+                    <input type="number" id="precioMin" placeholder="0" class="filtro-input">
+                </div>
+                <div class="filtro-group">
+                    <label>💰 Precio máximo</label>
+                    <input type="number" id="precioMax" placeholder="Ilimitado" class="filtro-input">
+                </div>
+                <div class="filtro-group">
+                    <label>🏷️ Filtrar por etiqueta</label>
+                    <select id="filtroEtiqueta" class="filtro-select">
+                        <option value="">Todas las etiquetas</option>
+                    </select>
+                </div>
+                <button id="limpiarFiltros" class="btn btn-secondary" style="margin-top: 1.5rem;">Limpiar filtros</button>
+            </div>
+        </div>
+        
         <div id="productosList" class="productos-grid">
             <!-- Aquí se cargan los productos -->
         </div>
