@@ -4,7 +4,8 @@ if (!localStorage.getItem('usuarios')) {
         {
             username: "Lautaro56",
             email: "lautaro@email.com",
-            password: "123456"
+            password: "123456",
+            fotoPerfil: null
         }
     ]));
 }
@@ -13,6 +14,9 @@ if (!localStorage.getItem('productos')) {
 }
 if (!localStorage.getItem('mensajes')) {
     localStorage.setItem('mensajes', JSON.stringify([]));
+}
+if (!localStorage.getItem('mensajesLeidos')) {
+    localStorage.setItem('mensajesLeidos', JSON.stringify({}));
 }
 
 // ==================== FUNCIONES DE AYUDA ====================
@@ -28,6 +32,10 @@ function getMensajes() {
     return JSON.parse(localStorage.getItem('mensajes'));
 }
 
+function getMensajesLeidos() {
+    return JSON.parse(localStorage.getItem('mensajesLeidos')) || {};
+}
+
 function guardarUsuarios(usuarios) {
     localStorage.setItem('usuarios', JSON.stringify(usuarios));
 }
@@ -38,6 +46,10 @@ function guardarProductos(productos) {
 
 function guardarMensajes(mensajes) {
     localStorage.setItem('mensajes', JSON.stringify(mensajes));
+}
+
+function guardarMensajesLeidos(leidos) {
+    localStorage.setItem('mensajesLeidos', JSON.stringify(leidos));
 }
 
 function getUsuarioActual() {
@@ -54,6 +66,132 @@ function cerrarSesion() {
     window.location.href = 'index.html';
 }
 
+// ==================== FOTO DE PERFIL ====================
+function getFotoPerfil(username) {
+    const usuarios = getUsuarios();
+    const usuario = usuarios.find(u => u.username === username);
+    return usuario?.fotoPerfil || null;
+}
+
+function actualizarFotoPerfil(username, fotoBase64) {
+    const usuarios = getUsuarios();
+    const index = usuarios.findIndex(u => u.username === username);
+    if (index !== -1) {
+        usuarios[index].fotoPerfil = fotoBase64;
+        guardarUsuarios(usuarios);
+        
+        const usuarioActual = getUsuarioActual();
+        if (usuarioActual && usuarioActual.nombre === username) {
+            usuarioActual.fotoPerfil = fotoBase64;
+            setUsuarioActual(usuarioActual);
+        }
+        return true;
+    }
+    return false;
+}
+
+function configurarFotoPerfil() {
+    const avatarContainer = document.getElementById('avatarContainer');
+    const fotoInput = document.getElementById('fotoPerfilInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const usuarioActual = getUsuarioActual();
+    
+    if (!avatarContainer || !fotoInput || !usuarioActual) return;
+    
+    const fotoActual = getFotoPerfil(usuarioActual.nombre);
+    if (fotoActual && avatarPreview) {
+        avatarPreview.innerHTML = `<img src="${fotoActual}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    avatarContainer.addEventListener('click', () => {
+        fotoInput.click();
+    });
+    
+    fotoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor seleccioná una imagen válida');
+            return;
+        }
+        
+        if (file.size > 2 * 1024 * 1024) {
+            alert('La imagen es demasiado grande. Máximo 2MB.');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const fotoBase64 = event.target.result;
+            actualizarFotoPerfil(usuarioActual.nombre, fotoBase64);
+            
+            if (avatarPreview) {
+                avatarPreview.innerHTML = `<img src="${fotoBase64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
+            
+            alert('✅ Foto de perfil actualizada correctamente');
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==================== CONTADOR DE MENSAJES NO LEÍDOS ====================
+function actualizarContadorMensajes() {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) return;
+    
+    const mensajes = getMensajes();
+    const leidos = getMensajesLeidos();
+    
+    let noLeidos = 0;
+    mensajes.forEach(m => {
+        if (m.para === usuarioActual.nombre && !leidos[`${m.id}_${usuarioActual.nombre}`]) {
+            noLeidos++;
+        }
+    });
+    
+    const contadorSpan = document.getElementById('mensajesCount');
+    if (contadorSpan) {
+        if (noLeidos > 0) {
+            contadorSpan.textContent = noLeidos;
+            contadorSpan.style.display = 'inline-block';
+        } else {
+            contadorSpan.style.display = 'none';
+        }
+    }
+    
+    if (noLeidos > 0) {
+        document.title = `(${noLeidos}) Football Shirts Pro`;
+    } else {
+        document.title = `Football Shirts Pro`;
+    }
+}
+
+function marcarConversacionComoLeida(conversacionId, otroUsuario) {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) return;
+    
+    const mensajes = getMensajes();
+    const leidos = getMensajesLeidos();
+    let cambio = false;
+    
+    mensajes.forEach(m => {
+        if (m.conversacionId === conversacionId && m.para === usuarioActual.nombre && !leidos[`${m.id}_${usuarioActual.nombre}`]) {
+            leidos[`${m.id}_${usuarioActual.nombre}`] = true;
+            cambio = true;
+        }
+    });
+    
+    if (cambio) {
+        guardarMensajesLeidos(leidos);
+        actualizarContadorMensajes();
+    }
+}
+
 // ==================== LOGIN ====================
 if (document.getElementById('loginForm')) {
     document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -65,16 +203,19 @@ if (document.getElementById('loginForm')) {
         const usuario = usuarios.find(u => u.username === username && u.password === password);
         
         if (usuario) {
-            setUsuarioActual({ nombre: usuario.username, email: usuario.email });
+            setUsuarioActual({ nombre: usuario.username, email: usuario.email, fotoPerfil: usuario.fotoPerfil });
             window.location.href = 'tienda.html';
         } else {
             alert('Usuario o contraseña incorrectos');
         }
     });
     
-    document.getElementById('btnRegistro').addEventListener('click', function() {
-        window.location.href = 'registro.html';
-    });
+    const btnRegistro = document.getElementById('btnRegistro');
+    if (btnRegistro) {
+        btnRegistro.addEventListener('click', function() {
+            window.location.href = 'registro.html';
+        });
+    }
 }
 
 // ==================== REGISTRO ====================
@@ -102,46 +243,48 @@ if (document.getElementById('registroForm')) {
             return;
         }
         
-        usuarios.push({ username, email, password });
+        usuarios.push({ username, email, password, fotoPerfil: null });
         guardarUsuarios(usuarios);
         
         alert('Registro exitoso. Ahora inicia sesión');
         window.location.href = 'index.html';
     });
     
-    document.getElementById('volverLogin').addEventListener('click', function() {
-        window.location.href = 'index.html';
-    });
+    const volverLogin = document.getElementById('volverLogin');
+    if (volverLogin) {
+        volverLogin.addEventListener('click', function() {
+            window.location.href = 'index.html';
+        });
+    }
 }
 
 // ==================== FILTRADO DE PRODUCTOS ====================
 function filtrarProductos() {
     const productos = getProductos();
-    const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
-    const precioMin = parseInt(document.getElementById('precioMin')?.value) || 0;
-    const precioMax = parseInt(document.getElementById('precioMax')?.value) || Infinity;
-    const etiquetaFiltro = document.getElementById('filtroEtiqueta')?.value || '';
+    const searchInput = document.getElementById('searchInput');
+    const precioMinInput = document.getElementById('precioMin');
+    const precioMaxInput = document.getElementById('precioMax');
+    const filtroEtiquetaSelect = document.getElementById('filtroEtiqueta');
     
-    // Verificar si hay tag en la URL (para click en etiquetas)
+    const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+    const precioMin = precioMinInput ? (parseInt(precioMinInput.value) || 0) : 0;
+    const precioMax = precioMaxInput ? (parseInt(precioMaxInput.value) || Infinity) : Infinity;
+    const etiquetaFiltro = filtroEtiquetaSelect ? filtroEtiquetaSelect.value : '';
+    
     const urlParams = new URLSearchParams(window.location.search);
     const urlTag = urlParams.get('tag');
     const tagActiva = urlTag || etiquetaFiltro;
     
     return productos.filter(producto => {
-        // Solo mostrar productos disponibles
         if (!producto.disponible) return false;
         
-        // Búsqueda por texto (nombre, descripción, etiquetas)
         const tagsString = producto.etiquetas ? producto.etiquetas.join(' ').toLowerCase() : '';
         const matchesSearch = searchText === '' || 
             producto.nombre.toLowerCase().includes(searchText) ||
             producto.descripcion.toLowerCase().includes(searchText) ||
             tagsString.includes(searchText);
         
-        // Filtro por precio
         const matchesPrice = producto.precio >= precioMin && producto.precio <= precioMax;
-        
-        // Filtro por etiqueta específica
         const matchesTag = tagActiva === '' || 
             (producto.etiquetas && producto.etiquetas.includes(tagActiva));
         
@@ -165,7 +308,6 @@ function actualizarSelectEtiquetas() {
     });
     
     const valorActual = select.value;
-    
     select.innerHTML = '<option value="">Todas las etiquetas</option>';
     Array.from(todasEtiquetas).sort().forEach(etiqueta => {
         const option = document.createElement('option');
@@ -203,22 +345,32 @@ function cargarTienda() {
         return;
     }
     
-    contenedor.innerHTML = productosFiltrados.map(producto => `
+    contenedor.innerHTML = productosFiltrados.map(producto => {
+        const fotoVendedor = getFotoPerfil(producto.vendedor);
+        return `
         <div class="producto-card">
-            <div class="producto-imagen">👕</div>
+            <div class="producto-imagen">
+                ${producto.imagen ? `<img src="${producto.imagen}" alt="${producto.nombre}" style="width: 100%; height: 100%; object-fit: cover;">` : '👕'}
+            </div>
             <div class="producto-info">
-                <div class="producto-titulo">${producto.nombre}</div>
+                <div class="producto-titulo">${escapeHtml(producto.nombre)}</div>
                 <div class="producto-precio">$${producto.precio.toLocaleString()}</div>
                 <div class="producto-etiquetas">
-                    ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta" data-tag="${tag}">${tag}</span>`).join('') : ''}
+                    ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`).join('') : ''}
                 </div>
-                <span class="producto-estado">
-                    Disponible
-                </span>
+                <div class="vendedor-info">
+                    <div class="vendedor-avatar">
+                        ${fotoVendedor ? `<img src="${fotoVendedor}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : '👤'}
+                    </div>
+                    <div class="vendedor-nombre">
+                        <strong>${escapeHtml(producto.vendedor)}</strong>
+                    </div>
+                </div>
+                <span class="producto-estado">Disponible</span>
                 <a href="publicacion.html?id=${producto.id}" class="btn-ver">Ver publicación</a>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     document.querySelectorAll('.etiqueta').forEach(etiqueta => {
         etiqueta.addEventListener('click', () => {
@@ -229,7 +381,6 @@ function cargarTienda() {
 }
 
 function aplicarFiltros() {
-    // Limpiar URL de parámetro tag cuando se usan filtros manuales
     if (window.location.search.includes('tag')) {
         window.history.replaceState({}, '', 'tienda.html');
     }
@@ -274,12 +425,19 @@ function cargarPerfil() {
         return;
     }
     
-    document.getElementById('nombreUsuario').textContent = usuarioActual.nombre;
-    document.getElementById('emailUsuario').textContent = usuarioActual.email;
+    const nombreUsuario = document.getElementById('nombreUsuario');
+    const emailUsuario = document.getElementById('emailUsuario');
+    
+    if (nombreUsuario) nombreUsuario.textContent = usuarioActual.nombre;
+    if (emailUsuario) emailUsuario.textContent = usuarioActual.email;
+    
+    configurarFotoPerfil();
     
     const productos = getProductos();
     const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre);
     const contenedor = document.getElementById('misPublicaciones');
+    
+    if (!contenedor) return;
     
     if (misProductos.length === 0) {
         contenedor.innerHTML = `
@@ -293,12 +451,14 @@ function cargarPerfil() {
     
     contenedor.innerHTML = misProductos.map(producto => `
         <div class="producto-card">
-            <div class="producto-imagen">👕</div>
+            <div class="producto-imagen">
+                ${producto.imagen ? `<img src="${producto.imagen}" alt="${producto.nombre}" style="width: 100%; height: 100%; object-fit: cover;">` : '👕'}
+            </div>
             <div class="producto-info">
-                <div class="producto-titulo">${producto.nombre}</div>
+                <div class="producto-titulo">${escapeHtml(producto.nombre)}</div>
                 <div class="producto-precio">$${producto.precio.toLocaleString()}</div>
                 <div class="producto-etiquetas">
-                    ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta">${tag}</span>`).join('') : ''}
+                    ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta">${escapeHtml(tag)}</span>`).join('') : ''}
                 </div>
                 <span class="producto-estado ${!producto.disponible ? 'vendido' : ''}">
                     ${producto.disponible ? 'Disponible' : 'Vendido'}
@@ -313,6 +473,59 @@ function cargarPerfil() {
 
 // ==================== SUBIR CAMISETA ====================
 if (document.getElementById('publicarForm')) {
+    let imagenSeleccionada = null;
+    
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('imagen');
+    const previewContainer = document.getElementById('previewContainer');
+    
+    if (dropZone && fileInput && previewContainer) {
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                procesarImagen(file);
+            } else {
+                alert('Por favor, seleccioná un archivo de imagen válido');
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                procesarImagen(file);
+            }
+        });
+        
+        function procesarImagen(file) {
+            if (file.size > 2 * 1024 * 1024) {
+                alert('La imagen es demasiado grande. Máximo 2MB.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                imagenSeleccionada = event.target.result;
+                previewContainer.innerHTML = `<img src="${imagenSeleccionada}" class="imagen-preview" style="max-width: 100%; max-height: 150px; border-radius: 8px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
     document.getElementById('publicarForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -329,7 +542,7 @@ if (document.getElementById('publicarForm')) {
         const descripcion = document.getElementById('descripcion').value;
         
         if (!nombre || !precio || !descripcion) {
-            alert('Completa todos los campos');
+            alert('Completa todos los campos obligatorios (*)');
             return;
         }
         
@@ -349,6 +562,7 @@ if (document.getElementById('publicarForm')) {
             precio: precio,
             descripcion: descripcion,
             etiquetas: etiquetas,
+            imagen: imagenSeleccionada || null,
             vendedor: usuarioActual.nombre,
             disponible: true,
             fecha: new Date().toISOString()
@@ -360,13 +574,24 @@ if (document.getElementById('publicarForm')) {
     });
 }
 
-// ==================== DETALLE PUBLICACIÓN (COMPLETA) ====================
+// ==================== ESCAPE HTML ====================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== DETALLE PUBLICACIÓN ====================
 function cargarDetallePublicacion() {
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id'));
+    const contenedor = document.getElementById('detallePublicacion');
+    
+    if (!contenedor) return;
     
     if (!id) {
-        document.getElementById('detallePublicacion').innerHTML = '<p>Publicación no encontrada</p>';
+        contenedor.innerHTML = '<p>Publicación no encontrada</p>';
         return;
     }
     
@@ -374,7 +599,7 @@ function cargarDetallePublicacion() {
     const producto = productos.find(p => p.id === id);
     
     if (!producto) {
-        document.getElementById('detallePublicacion').innerHTML = '<p>Publicación no encontrada</p>';
+        contenedor.innerHTML = '<p>Publicación no encontrada</p>';
         return;
     }
     
@@ -385,22 +610,24 @@ function cargarDetallePublicacion() {
     }
     
     const esMiPublicacion = usuarioActual.nombre === producto.vendedor;
-    const mensajes = getMensajes();
-    const mensajesProducto = mensajes.filter(m => m.publicacionId === id);
+    const fotoVendedor = getFotoPerfil(producto.vendedor);
     
     let html = `
         <div>
             <div style="background: white; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
                     <div style="flex: 1; text-align: center; background: #f8f9fa; border-radius: 12px; padding: 2rem; min-width: 200px;">
-                        <div style="font-size: 6rem;">👕</div>
+                        ${producto.imagen ? 
+                            `<img src="${producto.imagen}" alt="${escapeHtml(producto.nombre)}" style="max-width: 100%; max-height: 250px; border-radius: 8px; object-fit: contain;">` : 
+                            '<div style="font-size: 6rem;">👕</div>'
+                        }
                     </div>
                     
                     <div style="flex: 2;">
-                        <h1 style="margin-bottom: 0.5rem;">${producto.nombre}</h1>
+                        <h1 style="margin-bottom: 0.5rem;">${escapeHtml(producto.nombre)}</h1>
                         
                         <div class="producto-etiquetas" style="margin: 0.5rem 0 1rem 0;">
-                            ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta" data-tag="${tag}">${tag}</span>`).join('') : ''}
+                            ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`).join('') : ''}
                         </div>
                         
                         <div style="background: #f39c12; display: inline-block; padding: 0.5rem 1.5rem; border-radius: 30px; margin: 0.5rem 0;">
@@ -408,14 +635,19 @@ function cargarDetallePublicacion() {
                         </div>
                         
                         <div style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-                            <p style="line-height: 1.6;">${producto.descripcion}</p>
+                            <p style="line-height: 1.6;">${escapeHtml(producto.descripcion)}</p>
                         </div>
                         
-                        <div style="margin: 1rem 0; padding: 0.5rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
-                            <p>👤 <strong>Vendedor:</strong> ${producto.vendedor}</p>
-                            <p>📅 <strong>Publicado:</strong> ${new Date(producto.fecha).toLocaleDateString()}</p>
-                            <p>🏷️ <strong>Estado:</strong> ${producto.disponible ? '<span style="color: #27ae60;">✅ Disponible</span>' : '<span style="color: #e74c3c;">❌ Vendido</span>'}</p>
+                        <div style="margin: 1rem 0; padding: 0.5rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 0.8rem;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #f39c12; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                ${fotoVendedor ? `<img src="${fotoVendedor}" style="width: 100%; height: 100%; object-fit: cover;">` : '👤'}
+                            </div>
+                            <div>
+                                <p><strong>Vendedor:</strong> ${escapeHtml(producto.vendedor)}</p>
+                                <p><strong>Publicado:</strong> ${new Date(producto.fecha).toLocaleDateString()}</p>
+                            </div>
                         </div>
+                        <p><strong>Estado:</strong> ${producto.disponible ? '<span style="color: #27ae60;">✅ Disponible</span>' : '<span style="color: #e74c3c;">❌ Vendido</span>'}</p>
     `;
     
     if (esMiPublicacion) {
@@ -447,165 +679,314 @@ function cargarDetallePublicacion() {
                     </div>
                 </div>
             </div>
-            
-            <div style="background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <h3>💬 Conversación sobre esta publicación</h3>
-                <div id="mensajesContainer" style="max-height: 400px; overflow-y: auto; margin: 1rem 0;">
+        </div>
     `;
     
-    if (mensajesProducto.length === 0) {
-        html += '<p style="text-align: center; color: #999; padding: 2rem;">No hay mensajes aún. Sé el primero en consultar.</p>';
-    } else {
-        mensajesProducto.forEach(m => {
-            const esMiMensaje = m.remitente === usuarioActual.nombre;
-            html += `
-                <div class="mensaje" style="${esMiMensaje ? 'background: #e8f4fd; border-left-color: #3498db;' : ''}">
-                    <div class="mensaje-header">
-                        <strong>${m.remitente}</strong>
-                        <small>${new Date(m.fecha).toLocaleString()}</small>
-                    </div>
-                    <p style="margin-top: 0.5rem;">${m.texto}</p>
-                </div>
-            `;
+    contenedor.innerHTML = html;
+    
+    document.querySelectorAll('.etiqueta').forEach(etiqueta => {
+        etiqueta.addEventListener('click', () => {
+            const tag = etiqueta.getAttribute('data-tag');
+            window.location.href = `tienda.html?tag=${encodeURIComponent(tag)}`;
         });
+    });
+    
+    if (esMiPublicacion) {
+        const btnEditar = document.getElementById('btnEditar');
+        const btnToggleEstado = document.getElementById('btnToggleEstado');
+        const btnEliminar = document.getElementById('btnEliminar');
+        
+        if (btnEditar) {
+            btnEditar.addEventListener('click', () => {
+                const nuevoNombre = prompt('✏️ Editar nombre:', producto.nombre);
+                if (!nuevoNombre) return;
+                
+                const nuevoPrecio = prompt('💰 Editar precio:', producto.precio);
+                if (!nuevoPrecio) return;
+                
+                const nuevasEtiquetas = prompt('🏷️ Editar etiquetas (separadas por comas):', producto.etiquetas ? producto.etiquetas.join(', ') : '');
+                
+                const nuevaDesc = prompt('📝 Editar descripción:', producto.descripcion);
+                if (!nuevaDesc) return;
+                
+                const index = productos.findIndex(p => p.id === id);
+                productos[index].nombre = nuevoNombre;
+                productos[index].precio = parseInt(nuevoPrecio);
+                productos[index].descripcion = nuevaDesc;
+                if (nuevasEtiquetas) {
+                    productos[index].etiquetas = nuevasEtiquetas.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                }
+                guardarProductos(productos);
+                alert('✅ Publicación actualizada correctamente');
+                cargarDetallePublicacion();
+            });
+        }
+        
+        if (btnToggleEstado) {
+            btnToggleEstado.addEventListener('click', () => {
+                const nuevoEstado = !producto.disponible;
+                const estadoTexto = nuevoEstado ? 'disponible' : 'vendido';
+                if (confirm(`¿Marcar esta publicación como ${estadoTexto}?`)) {
+                    const index = productos.findIndex(p => p.id === id);
+                    productos[index].disponible = nuevoEstado;
+                    guardarProductos(productos);
+                    alert(`✅ Publicación marcada como ${estadoTexto}`);
+                    cargarDetallePublicacion();
+                }
+            });
+        }
+        
+        if (btnEliminar) {
+            btnEliminar.addEventListener('click', () => {
+                if (confirm('⚠️ ¿Estás SEGURO de eliminar esta publicación? Esta acción no se puede deshacer.')) {
+                    const nuevosProductos = productos.filter(p => p.id !== id);
+                    guardarProductos(nuevosProductos);
+                    alert('🗑️ Publicación eliminada correctamente');
+                    window.location.href = 'tienda.html';
+                }
+            });
+        }
     }
     
-    html += `
-                </div>
-                
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <textarea id="nuevoMensaje" rows="3" placeholder="Escribí tu mensaje..." style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
-                    <button id="enviarMensaje" class="btn btn-primary" style="align-self: flex-end; background-color: #3498db;">Enviar</button>
-                </div>
+    if (!esMiPublicacion && producto.disponible) {
+        const btnContactar = document.getElementById('btnContactar');
+        const btnComprar = document.getElementById('btnComprar');
+        
+        if (btnContactar) {
+            btnContactar.addEventListener('click', () => {
+                abrirModalMensaje(producto.id, producto.nombre, producto.vendedor);
+            });
+        }
+        
+        if (btnComprar) {
+            btnComprar.addEventListener('click', () => {
+                if (confirm(`¿Confirmar compra de "${producto.nombre}" por $${producto.precio.toLocaleString()}?\n\nEl vendedor será notificado y se pondrá en contacto contigo.`)) {
+                    const index = productos.findIndex(p => p.id === id);
+                    productos[index].disponible = false;
+                    guardarProductos(productos);
+                    
+                    enviarMensajePrivado(
+                        producto.id,
+                        producto.nombre,
+                        producto.vendedor,
+                        `🎉 ¡Hola! Quiero COMPRAR esta camiseta. Por favor contactame para coordinar la entrega. Producto: ${producto.nombre} - $${producto.precio.toLocaleString()}`
+                    );
+                    
+                    alert(`✅ ¡Solicitud de compra enviada!\n\nEl vendedor (${producto.vendedor}) recibirá tu mensaje y se contactará contigo.`);
+                    cargarDetallePublicacion();
+                }
+            });
+        }
+    }
+}
+
+// ==================== MENSAJES PRIVADOS ====================
+function enviarMensajePrivado(productoId, productoNombre, paraUsuario, texto) {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) {
+        alert('Debes iniciar sesión');
+        return false;
+    }
+    
+    const conversacionId = `${Math.min(usuarioActual.nombre, paraUsuario)}_${Math.max(usuarioActual.nombre, paraUsuario)}_${productoId}`;
+    
+    const mensajes = getMensajes();
+    mensajes.push({
+        id: Date.now(),
+        conversacionId: conversacionId,
+        productoId: productoId,
+        productoNombre: productoNombre,
+        de: usuarioActual.nombre,
+        para: paraUsuario,
+        texto: texto,
+        fecha: new Date().toISOString(),
+        leido: false
+    });
+    guardarMensajes(mensajes);
+    
+    actualizarContadorMensajes();
+    return true;
+}
+
+function abrirModalMensaje(productoId, productoNombre, vendedor) {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) {
+        alert('Debes iniciar sesión');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    
+    const conversacionId = `${Math.min(usuarioActual.nombre, vendedor)}_${Math.max(usuarioActual.nombre, vendedor)}_${productoId}`;
+    const mensajes = getMensajes();
+    const conversacion = mensajes.filter(m => m.conversacionId === conversacionId);
+    
+    let mensajesHtml = '';
+    conversacion.forEach(m => {
+        const esPropio = m.de === usuarioActual.nombre;
+        mensajesHtml += `
+            <div class="${esPropio ? 'mensaje-propio' : 'mensaje-otro'}" style="margin: 0.5rem 0; ${esPropio ? 'margin-left: auto;' : 'margin-right: auto;'}">
+                <small style="font-size: 0.7rem; ${esPropio ? 'color: #ddd;' : 'color: #666;'}">${m.de} - ${new Date(m.fecha).toLocaleString()}</small>
+                <p style="margin: 0.3rem 0 0 0;">${escapeHtml(m.texto)}</p>
+            </div>
+        `;
+    });
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💬 ${escapeHtml(productoNombre)}</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalMensajesBody">
+                ${mensajesHtml || '<p style="text-align: center; color: #999;">No hay mensajes aún. Escribí tu consulta.</p>'}
+            </div>
+            <div class="modal-footer">
+                <input type="text" id="modalMensajeInput" placeholder="Escribí tu mensaje...">
+                <button id="modalEnviarBtn" class="btn btn-primary">Enviar</button>
             </div>
         </div>
     `;
     
-    document.getElementById('detallePublicacion').innerHTML = html;
+    document.body.appendChild(modal);
     
-    document.querySelectorAll('.etiqueta').forEach(etiqueta => {
-        etiqueta.addEventListener('click', () => {
-            window.location.href = `tienda.html?tag=${etiqueta.getAttribute('data-tag')}`;
-        });
+    marcarConversacionComoLeida(conversacionId, vendedor);
+    
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+        modal.remove();
     });
     
-    // Funciones del VENDEDOR
-    if (esMiPublicacion) {
-        document.getElementById('btnEditar')?.addEventListener('click', () => {
-            const nuevoNombre = prompt('✏️ Editar nombre:', producto.nombre);
-            if (!nuevoNombre) return;
-            
-            const nuevoPrecio = prompt('💰 Editar precio:', producto.precio);
-            if (!nuevoPrecio) return;
-            
-            const nuevasEtiquetas = prompt('🏷️ Editar etiquetas (separadas por comas):', producto.etiquetas ? producto.etiquetas.join(', ') : '');
-            
-            const nuevaDesc = prompt('📝 Editar descripción:', producto.descripcion);
-            if (!nuevaDesc) return;
-            
-            const index = productos.findIndex(p => p.id === id);
-            productos[index].nombre = nuevoNombre;
-            productos[index].precio = parseInt(nuevoPrecio);
-            productos[index].descripcion = nuevaDesc;
-            if (nuevasEtiquetas) {
-                productos[index].etiquetas = nuevasEtiquetas.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-            }
-            guardarProductos(productos);
-            alert('✅ Publicación actualizada correctamente');
-            cargarDetallePublicacion();
-        });
-        
-        document.getElementById('btnToggleEstado')?.addEventListener('click', () => {
-            const nuevoEstado = !producto.disponible;
-            const estadoTexto = nuevoEstado ? 'disponible' : 'vendido';
-            if (confirm(`¿Marcar esta publicación como ${estadoTexto}?`)) {
-                const index = productos.findIndex(p => p.id === id);
-                productos[index].disponible = nuevoEstado;
-                guardarProductos(productos);
-                alert(`✅ Publicación marcada como ${estadoTexto}`);
-                cargarDetallePublicacion();
-            }
-        });
-        
-        document.getElementById('btnEliminar')?.addEventListener('click', () => {
-            if (confirm('⚠️ ¿Estás SEGURO de eliminar esta publicación? Esta acción no se puede deshacer.')) {
-                const nuevosProductos = productos.filter(p => p.id !== id);
-                guardarProductos(nuevosProductos);
-                
-                const todosMensajes = getMensajes();
-                const nuevosMensajes = todosMensajes.filter(m => m.publicacionId !== id);
-                guardarMensajes(nuevosMensajes);
-                
-                alert('🗑️ Publicación eliminada correctamente');
-                window.location.href = 'tienda.html';
-            }
-        });
-    }
+    const enviarBtn = modal.querySelector('#modalEnviarBtn');
+    const input = modal.querySelector('#modalMensajeInput');
     
-    // Funciones del COMPRADOR
-    if (!esMiPublicacion && producto.disponible) {
-        document.getElementById('btnContactar')?.addEventListener('click', () => {
-            const mensajeBox = document.getElementById('nuevoMensaje');
-            if (mensajeBox) {
-                mensajeBox.focus();
-                mensajeBox.scrollIntoView({ behavior: 'smooth' });
-                mensajeBox.placeholder = 'Escribí tu consulta aquí...';
-            }
-        });
-        
-        document.getElementById('btnComprar')?.addEventListener('click', () => {
-            if (confirm(`¿Confirmar compra de "${producto.nombre}" por $${producto.precio.toLocaleString()}?\n\nEl vendedor será notificado y se pondrá en contacto contigo.`)) {
-                const index = productos.findIndex(p => p.id === id);
-                productos[index].disponible = false;
-                guardarProductos(productos);
-                
-                const mensajes = getMensajes();
-                mensajes.push({
-                    id: Date.now(),
-                    publicacionId: id,
-                    remitente: usuarioActual.nombre,
-                    texto: `🎉 ¡Hola! Quiero COMPRAR esta camiseta. Por favor contactame para coordinar la entrega. Mi consulta es sobre: ${producto.nombre} - $${producto.precio.toLocaleString()}`,
-                    fecha: new Date().toISOString()
-                });
-                guardarMensajes(mensajes);
-                
-                alert(`✅ ¡Solicitud de compra enviada!\n\nEl vendedor (${producto.vendedor}) recibirá tu mensaje y se contactará contigo.`);
-                cargarDetallePublicacion();
-            }
-        });
-    }
-    
-    // ENVIAR MENSAJE
-    document.getElementById('enviarMensaje')?.addEventListener('click', () => {
-        const texto = document.getElementById('nuevoMensaje').value.trim();
+    const enviarMensaje = () => {
+        const texto = input.value.trim();
         if (!texto) {
-            alert('✏️ Escribí un mensaje antes de enviar');
-            return;
-        }
-        
-        const usuarioActual = getUsuarioActual();
-        if (!usuarioActual) {
-            alert('Debes iniciar sesión');
-            window.location.href = 'index.html';
+            alert('Escribí un mensaje');
             return;
         }
         
         const mensajes = getMensajes();
         mensajes.push({
             id: Date.now(),
-            publicacionId: id,
-            remitente: usuarioActual.nombre,
+            conversacionId: conversacionId,
+            productoId: productoId,
+            productoNombre: productoNombre,
+            de: usuarioActual.nombre,
+            para: vendedor,
             texto: texto,
-            fecha: new Date().toISOString()
+            fecha: new Date().toISOString(),
+            leido: false
         });
         guardarMensajes(mensajes);
         
-        document.getElementById('nuevoMensaje').value = '';
-        cargarDetallePublicacion();
+        input.value = '';
         
-        if (usuarioActual.nombre !== producto.vendedor) {
-            alert('💬 Mensaje enviado al vendedor. Te responderá a la brevedad.');
+        const body = modal.querySelector('#modalMensajesBody');
+        const nuevoMensajeHtml = `
+            <div class="mensaje-propio" style="margin: 0.5rem 0; margin-left: auto;">
+                <small style="font-size: 0.7rem; color: #ddd;">${usuarioActual.nombre} - ${new Date().toLocaleString()}</small>
+                <p style="margin: 0.3rem 0 0 0;">${escapeHtml(texto)}</p>
+            </div>
+        `;
+        
+        if (body.innerHTML.includes('No hay mensajes')) {
+            body.innerHTML = nuevoMensajeHtml;
+        } else {
+            body.innerHTML += nuevoMensajeHtml;
         }
+        body.scrollTop = body.scrollHeight;
+        
+        actualizarContadorMensajes();
+        alert('💬 Mensaje enviado');
+    };
+    
+    enviarBtn.addEventListener('click', enviarMensaje);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            enviarMensaje();
+        }
+    });
+    
+    const body = modal.querySelector('#modalMensajesBody');
+    if (body) body.scrollTop = body.scrollHeight;
+}
+
+// ==================== PÁGINA DE MENSAJES ====================
+function cargarMensajesPage() {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    const mensajes = getMensajes();
+    const conversacionesMap = new Map();
+    
+    mensajes.forEach(m => {
+        if (m.para === usuarioActual.nombre || m.de === usuarioActual.nombre) {
+            if (!conversacionesMap.has(m.conversacionId)) {
+                conversacionesMap.set(m.conversacionId, {
+                    id: m.conversacionId,
+                    productoId: m.productoId,
+                    productoNombre: m.productoNombre,
+                    otroUsuario: m.de === usuarioActual.nombre ? m.para : m.de,
+                    ultimoMensaje: m.texto,
+                    ultimaFecha: m.fecha,
+                    noLeidos: 0
+                });
+            }
+            
+            const conv = conversacionesMap.get(m.conversacionId);
+            if (new Date(m.fecha) > new Date(conv.ultimaFecha)) {
+                conv.ultimoMensaje = m.texto;
+                conv.ultimaFecha = m.fecha;
+            }
+            if (m.para === usuarioActual.nombre) {
+                const leidos = getMensajesLeidos();
+                if (!leidos[`${m.id}_${usuarioActual.nombre}`]) {
+                    conv.noLeidos++;
+                }
+            }
+        }
+    });
+    
+    const contenedor = document.getElementById('conversacionesList');
+    if (!contenedor) return;
+    
+    if (conversacionesMap.size === 0) {
+        contenedor.innerHTML = `
+            <div style="text-align: center; padding: 3rem; background: white; border-radius: 12px;">
+                <p style="font-size: 1.2rem; color: #666;">📭 No hay conversaciones aún</p>
+                <p style="margin-top: 1rem;">Cuando contactes a un vendedor, aparecerán aquí tus mensajes.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const conversacionesArray = Array.from(conversacionesMap.values());
+    conversacionesArray.sort((a, b) => new Date(b.ultimaFecha) - new Date(a.ultimaFecha));
+    
+    contenedor.innerHTML = conversacionesArray.map(conv => `
+        <div class="conversacion-card ${conv.noLeidos > 0 ? 'no-leido' : ''}" data-producto-id="${conv.productoId}" data-producto-nombre="${conv.productoNombre}" data-otro-usuario="${conv.otroUsuario}">
+            <div class="conversacion-info">
+                <div class="conversacion-producto">👕 ${escapeHtml(conv.productoNombre)}</div>
+                <div class="conversacion-ultimo">💬 ${escapeHtml(conv.otroUsuario)}: ${escapeHtml(conv.ultimoMensaje.substring(0, 50))}${conv.ultimoMensaje.length > 50 ? '...' : ''}</div>
+                <div class="conversacion-fecha">${new Date(conv.ultimaFecha).toLocaleString()}</div>
+            </div>
+            ${conv.noLeidos > 0 ? `<div class="conversacion-estado">${conv.noLeidos}</div>` : ''}
+        </div>
+    `).join('');
+    
+    document.querySelectorAll('.conversacion-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const productoId = parseInt(card.getAttribute('data-producto-id'));
+            const productoNombre = card.getAttribute('data-producto-nombre');
+            const otroUsuario = card.getAttribute('data-otro-usuario');
+            abrirModalMensaje(productoId, productoNombre, otroUsuario);
+        });
     });
 }
 
@@ -632,6 +1013,7 @@ function verificarAuth() {
 
 // ==================== INICIAR SEGÚN PÁGINA ====================
 verificarAuth();
+actualizarContadorMensajes();
 
 const pagina = window.location.pathname.split('/').pop();
 
@@ -639,8 +1021,11 @@ if (pagina === 'tienda.html') {
     actualizarSelectEtiquetas();
     cargarTienda();
     configurarFiltros();
+    setInterval(actualizarContadorMensajes, 5000);
 } else if (pagina === 'perfil.html') {
     cargarPerfil();
 } else if (pagina === 'publicacion.html') {
     cargarDetallePublicacion();
+} else if (pagina === 'mensajes.html') {
+    cargarMensajesPage();
 }

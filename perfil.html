@@ -1,54 +1,50 @@
-// ==================== PERFIL (con botón editar/eliminar) ====================
-function cargarPerfil() {
-    const usuarioActual = getUsuarioActual();
-    
-    if (!usuarioActual) {
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    document.getElementById('nombreUsuario').textContent = usuarioActual.nombre;
-    document.getElementById('emailUsuario').textContent = usuarioActual.email;
-    
-    const productos = getProductos();
-    const misProductos = productos.filter(p => p.vendedor === usuarioActual.nombre);
-    const contenedor = document.getElementById('misPublicaciones');
-    
-    if (misProductos.length === 0) {
-        contenedor.innerHTML = `
-            <div style="text-align: center; padding: 3rem; background: white; border-radius: 12px; grid-column: 1/-1;">
-                <p style="font-size: 1.2rem; color: #666;">📭 No tienes publicaciones</p>
-                <p style="margin-top: 1rem;"><a href="subir-camiseta.html" style="color: #f39c12;">Subí tu primera camiseta</a></p>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Shirts Pro | Mi Perfil</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <h2>⚽ FOOTBALL SHIRTS PRO</h2>
             </div>
-        `;
-        return;
-    }
-    
-    contenedor.innerHTML = misProductos.map(producto => `
-        <div class="producto-card">
-            <div class="producto-imagen">👕</div>
-            <div class="producto-info">
-                <div class="producto-titulo">${producto.nombre}</div>
-                <div class="producto-precio">$${producto.precio.toLocaleString()}</div>
-                <div class="producto-etiquetas">
-                    ${producto.etiquetas ? producto.etiquetas.map(tag => `<span class="etiqueta">${tag}</span>`).join('') : ''}
-                </div>
-                <span class="producto-estado ${!producto.disponible ? 'vendido' : ''}">
-                    ${producto.disponible ? 'Disponible' : 'Vendido'}
-                </span>
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                    <a href="publicacion.html?id=${producto.id}" class="btn-ver" style="flex: 1;">Ver</a>
-                    <button class="btn-editar-perfil" data-id="${producto.id}" style="background-color: #3498db; color: white; border: none; padding: 0.5rem; border-radius: 8px; cursor: pointer;">✏️</button>
-                </div>
+            <div class="nav-links">
+                <a href="tienda.html" class="nav-link">Tienda</a>
+                <a href="subir-camiseta.html" class="nav-link">+ Subir Camiseta</a>
+                <a href="mensajes.html" class="nav-link" id="mensajesLink">💬 Mensajes <span id="mensajesCount" style="background-color: #e74c3c; color: white; border-radius: 50%; padding: 0.2rem 0.5rem; font-size: 0.7rem; margin-left: 0.3rem; display: none;">0</span></a>
+                <a href="#" id="cerrarSesion" class="nav-link">Cerrar Sesión</a>
             </div>
         </div>
-    `).join('');
-    
-    // Agregar eventos a los botones de editar en el perfil
-    document.querySelectorAll('.btn-editar-perfil').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = parseInt(btn.getAttribute('data-id'));
-            window.location.href = `publicacion.html?id=${id}`;
-        });
-    });
-}
+    </nav>
+
+    <div class="container">
+        <div class="perfil-header">
+            <div class="avatar" id="avatarContainer" style="position: relative; cursor: pointer;">
+                <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: #f39c12; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; overflow: hidden;">
+                    👤
+                </div>
+                <div style="position: absolute; bottom: 0; right: 0; background: #3498db; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: white; border: 2px solid white;">
+                    📷
+                </div>
+                <input type="file" id="fotoPerfilInput" accept="image/jpeg, image/png, image/webp" style="display: none;">
+            </div>
+            <div>
+                <h2 id="nombreUsuario"></h2>
+                <small id="emailUsuario"></small>
+                <p style="margin-top: 0.5rem; font-size: 0.8rem; color: #999;">Hacé click en la foto para cambiarla</p>
+            </div>
+        </div>
+
+        <h3>Mis publicaciones</h3>
+        <div id="misPublicaciones" class="productos-grid">
+            <!-- Aquí se cargan las publicaciones del usuario -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
