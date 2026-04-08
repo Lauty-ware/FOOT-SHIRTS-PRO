@@ -18,6 +18,9 @@ if (!localStorage.getItem('mensajes')) {
 if (!localStorage.getItem('mensajesLeidos')) {
     localStorage.setItem('mensajesLeidos', JSON.stringify({}));
 }
+if (!localStorage.getItem('calificaciones')) {
+    localStorage.setItem('calificaciones', JSON.stringify([]));
+}
 
 // ==================== FUNCIONES DE AYUDA ====================
 function getUsuarios() {
@@ -36,6 +39,10 @@ function getMensajesLeidos() {
     return JSON.parse(localStorage.getItem('mensajesLeidos')) || {};
 }
 
+function getCalificaciones() {
+    return JSON.parse(localStorage.getItem('calificaciones'));
+}
+
 function guardarUsuarios(usuarios) {
     localStorage.setItem('usuarios', JSON.stringify(usuarios));
 }
@@ -50,6 +57,10 @@ function guardarMensajes(mensajes) {
 
 function guardarMensajesLeidos(leidos) {
     localStorage.setItem('mensajesLeidos', JSON.stringify(leidos));
+}
+
+function guardarCalificaciones(calificaciones) {
+    localStorage.setItem('calificaciones', JSON.stringify(calificaciones));
 }
 
 function getUsuarioActual() {
@@ -136,6 +147,141 @@ function configurarFotoPerfil() {
             }, 500);
         };
         reader.readAsDataURL(file);
+    });
+}
+
+// ==================== CALIFICACIONES ====================
+function getPromedioCalificaciones(vendedor) {
+    const calificaciones = getCalificaciones();
+    const delVendedor = calificaciones.filter(c => c.para === vendedor);
+    if (delVendedor.length === 0) return null;
+    const suma = delVendedor.reduce((acc, c) => acc + c.puntuacion, 0);
+    return {
+        promedio: (suma / delVendedor.length).toFixed(1),
+        cantidad: delVendedor.length
+    };
+}
+
+function renderEstrellas(puntuacion, interactivo = false) {
+    let html = '<div class="stars-container" style="display: flex; gap: 0.2rem;">';
+    for (let i = 1; i <= 5; i++) {
+        const clase = i <= puntuacion ? 'star active' : 'star';
+        if (interactivo) {
+            html += `<span class="${clase}" data-valor="${i}" style="font-size: 1rem; cursor: pointer; color: ${i <= puntuacion ? '#ffc107' : '#ddd'};">★</span>`;
+        } else {
+            html += `<span class="${clase} rating-static" style="font-size: 1rem; color: ${i <= puntuacion ? '#ffc107' : '#ddd'};">★</span>`;
+        }
+    }
+    html += '</div>';
+    return html;
+}
+
+function mostrarPromedioVendedor(vendedor) {
+    const promedio = getPromedioCalificaciones(vendedor);
+    if (promedio) {
+        return `
+            <div style="display: flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; flex-wrap: wrap;">
+                ${renderEstrellas(parseFloat(promedio.promedio), false)}
+                <span style="font-weight: bold; color: #ffc107; font-size: 0.8rem;">${promedio.promedio}</span>
+                <span style="font-size: 0.7rem; color: #666;">(${promedio.cantidad})</span>
+            </div>
+        `;
+    }
+    return '<div style="margin-top: 0.2rem;"><span style="font-size: 0.7rem; color: #999;">⭐ Sin calificaciones</span></div>';
+}
+
+function calificarVendedor(vendedor, productoId, productoNombre) {
+    const usuarioActual = getUsuarioActual();
+    if (!usuarioActual) return;
+    if (usuarioActual.nombre === vendedor) {
+        alert('No puedes calificarte a ti mismo');
+        return;
+    }
+    
+    const calificaciones = getCalificaciones();
+    const yaCalifico = calificaciones.find(c => c.productoId === productoId && c.de === usuarioActual.nombre);
+    if (yaCalifico) {
+        alert('Ya calificaste esta compra');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.zIndex = '1000';
+    modal.style.display = 'flex';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; max-width: 400px; width: 90%; overflow: hidden;">
+            <div style="padding: 1rem; background: #1a1a2e; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">⭐ Calificar a ${vendedor}</h3>
+                <button class="close-modal" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; text-align: center;">
+                <p>¿Qué puntuación le das a este vendedor?</p>
+                <div id="calificacionEstrellas" style="display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0;">
+                    ${[1,2,3,4,5].map(i => `<span class="star" data-valor="${i}" style="font-size: 2rem; cursor: pointer; color: #ddd;">★</span>`).join('')}
+                </div>
+                <textarea id="comentarioCalificacion" rows="3" placeholder="Deja un comentario (opcional)" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid #ddd; font-family: inherit;"></textarea>
+            </div>
+            <div style="padding: 1rem; border-top: 1px solid #eee; display: flex; justify-content: center;">
+                <button id="enviarCalificacion" class="btn btn-primary" style="background-color: #ffc107; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Enviar calificación</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    let puntuacionSeleccionada = 0;
+    const estrellas = modal.querySelectorAll('#calificacionEstrellas .star');
+    
+    estrellas.forEach(star => {
+        star.addEventListener('click', () => {
+            const valor = parseInt(star.getAttribute('data-valor'));
+            puntuacionSeleccionada = valor;
+            estrellas.forEach((s, i) => {
+                if (i < valor) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+    });
+    
+    modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
+    
+    modal.querySelector('#enviarCalificacion').addEventListener('click', () => {
+        if (puntuacionSeleccionada === 0) {
+            alert('Seleccioná una puntuación');
+            return;
+        }
+        
+        const comentario = modal.querySelector('#comentarioCalificacion').value;
+        
+        const calificaciones = getCalificaciones();
+        calificaciones.push({
+            id: Date.now(),
+            de: usuarioActual.nombre,
+            para: vendedor,
+            productoId: productoId,
+            productoNombre: productoNombre,
+            puntuacion: puntuacionSeleccionada,
+            comentario: comentario,
+            fecha: new Date().toISOString()
+        });
+        guardarCalificaciones(calificaciones);
+        
+        alert('✅ Calificación enviada. ¡Gracias por tu opinión!');
+        modal.remove();
+        
+        setTimeout(() => window.location.reload(), 500);
     });
 }
 
@@ -364,6 +510,7 @@ function cargarTienda() {
                     </div>
                     <div class="vendedor-nombre">
                         <strong>${escapeHtml(producto.vendedor)}</strong>
+                        ${mostrarPromedioVendedor(producto.vendedor)}
                     </div>
                 </div>
                 <span class="producto-estado">Disponible</span>
@@ -638,13 +785,18 @@ function cargarDetallePublicacion() {
                             <p style="line-height: 1.6;">${escapeHtml(producto.descripcion)}</p>
                         </div>
                         
-                        <div style="margin: 1rem 0; padding: 0.5rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 0.8rem;">
-                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #f39c12; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                ${fotoVendedor ? `<img src="${fotoVendedor}" style="width: 100%; height: 100%; object-fit: cover;">` : '👤'}
+                        <div style="margin: 1rem 0; padding: 0.5rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
+                            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #f39c12; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                    ${fotoVendedor ? `<img src="${fotoVendedor}" style="width: 100%; height: 100%; object-fit: cover;">` : '👤'}
+                                </div>
+                                <div>
+                                    <p><strong>Vendedor:</strong> ${escapeHtml(producto.vendedor)}</p>
+                                    <p><strong>Publicado:</strong> ${new Date(producto.fecha).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p><strong>Vendedor:</strong> ${escapeHtml(producto.vendedor)}</p>
-                                <p><strong>Publicado:</strong> ${new Date(producto.fecha).toLocaleDateString()}</p>
+                            <div style="margin-top: 0.5rem;">
+                                ${mostrarPromedioVendedor(producto.vendedor)}
                             </div>
                         </div>
                         <p><strong>Estado:</strong> ${producto.disponible ? '<span style="color: #27ae60;">✅ Disponible</span>' : '<span style="color: #e74c3c;">❌ Vendido</span>'}</p>
@@ -653,24 +805,25 @@ function cargarDetallePublicacion() {
     if (esMiPublicacion) {
         html += `
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
-                            <button id="btnEditar" class="btn btn-primary" style="background-color: #3498db;">✏️ Editar publicación</button>
-                            <button id="btnToggleEstado" class="btn btn-secondary" style="background-color: ${producto.disponible ? '#e67e22' : '#27ae60'}">
+                            <button id="btnEditar" class="btn btn-primary" style="background-color: #3498db; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white;">✏️ Editar publicación</button>
+                            <button id="btnToggleEstado" class="btn btn-secondary" style="background-color: ${producto.disponible ? '#e67e22' : '#27ae60'}; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white;">
                                 ${producto.disponible ? '🔴 Marcar como Vendido' : '🟢 Marcar como Disponible'}
                             </button>
-                            <button id="btnEliminar" class="btn btn-secondary" style="background-color: #e74c3c;">🗑️ Eliminar publicación</button>
+                            <button id="btnEliminar" class="btn btn-secondary" style="background-color: #e74c3c; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white;">🗑️ Eliminar publicación</button>
                         </div>
         `;
     } else if (producto.disponible) {
         html += `
                         <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
-                            <button id="btnContactar" class="btn btn-primary" style="background-color: #3498db;">💬 Contactar al vendedor</button>
-                            <button id="btnComprar" class="btn btn-primary" style="background-color: #27ae60;">🛒 Comprar / Reservar</button>
+                            <button id="btnContactar" class="btn btn-primary" style="background-color: #3498db; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white;">💬 Contactar al vendedor</button>
+                            <button id="btnComprar" class="btn btn-primary" style="background-color: #27ae60; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white;">🛒 Comprar / Reservar</button>
                         </div>
         `;
     } else {
         html += `
                         <div style="margin-top: 1.5rem; padding: 1rem; background: #fdf0f0; border-radius: 8px; text-align: center;">
                             <p style="color: #e74c3c;">❌ Este producto ya fue vendido</p>
+                            <button id="btnCalificarVendido" class="btn btn-primary" style="background-color: #ffc107; margin-top: 0.5rem; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;">⭐ Calificar vendedor</button>
                         </div>
         `;
     }
@@ -691,6 +844,7 @@ function cargarDetallePublicacion() {
         });
     });
     
+    // Funciones del VENDEDOR
     if (esMiPublicacion) {
         const btnEditar = document.getElementById('btnEditar');
         const btnToggleEstado = document.getElementById('btnToggleEstado');
@@ -748,6 +902,7 @@ function cargarDetallePublicacion() {
         }
     }
     
+    // Funciones del COMPRADOR
     if (!esMiPublicacion && producto.disponible) {
         const btnContactar = document.getElementById('btnContactar');
         const btnComprar = document.getElementById('btnComprar');
@@ -777,6 +932,14 @@ function cargarDetallePublicacion() {
                 }
             });
         }
+    }
+    
+    // Botón para calificar cuando está vendido
+    const btnCalificarVendido = document.getElementById('btnCalificarVendido');
+    if (btnCalificarVendido && !esMiPublicacion && !producto.disponible) {
+        btnCalificarVendido.addEventListener('click', () => {
+            calificarVendedor(producto.vendedor, producto.id, producto.nombre);
+        });
     }
 }
 
@@ -816,8 +979,16 @@ function abrirModalMensaje(productoId, productoNombre, vendedor) {
     }
     
     const modal = document.createElement('div');
-    modal.className = 'modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.zIndex = '1000';
     modal.style.display = 'flex';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
     
     const conversacionId = `${Math.min(usuarioActual.nombre, vendedor)}_${Math.max(usuarioActual.nombre, vendedor)}_${productoId}`;
     const mensajes = getMensajes();
@@ -827,25 +998,27 @@ function abrirModalMensaje(productoId, productoNombre, vendedor) {
     conversacion.forEach(m => {
         const esPropio = m.de === usuarioActual.nombre;
         mensajesHtml += `
-            <div class="${esPropio ? 'mensaje-propio' : 'mensaje-otro'}" style="margin: 0.5rem 0; ${esPropio ? 'margin-left: auto;' : 'margin-right: auto;'}">
-                <small style="font-size: 0.7rem; ${esPropio ? 'color: #ddd;' : 'color: #666;'}">${m.de} - ${new Date(m.fecha).toLocaleString()}</small>
-                <p style="margin: 0.3rem 0 0 0;">${escapeHtml(m.texto)}</p>
+            <div style="margin: 0.5rem 0; ${esPropio ? 'text-align: right;' : 'text-align: left;'}">
+                <div style="display: inline-block; max-width: 80%; padding: 0.5rem 1rem; border-radius: 18px; ${esPropio ? 'background: #3498db; color: white;' : 'background: #f0f0f0; color: #333;'}">
+                    <small style="font-size: 0.7rem; ${esPropio ? 'color: #ddd;' : 'color: #666;'}">${m.de} - ${new Date(m.fecha).toLocaleString()}</small>
+                    <p style="margin: 0.3rem 0 0 0;">${escapeHtml(m.texto)}</p>
+                </div>
             </div>
         `;
     });
     
     modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>💬 ${escapeHtml(productoNombre)}</h3>
-                <button class="close-modal">&times;</button>
+        <div style="background: white; border-radius: 16px; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;">
+            <div style="padding: 1rem; background: #1a1a2e; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">💬 ${escapeHtml(productoNombre)}</h3>
+                <button class="close-modal" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
             </div>
-            <div class="modal-body" id="modalMensajesBody">
+            <div id="modalMensajesBody" style="flex: 1; overflow-y: auto; padding: 1rem; max-height: 400px;">
                 ${mensajesHtml || '<p style="text-align: center; color: #999;">No hay mensajes aún. Escribí tu consulta.</p>'}
             </div>
-            <div class="modal-footer">
-                <input type="text" id="modalMensajeInput" placeholder="Escribí tu mensaje...">
-                <button id="modalEnviarBtn" class="btn btn-primary">Enviar</button>
+            <div style="padding: 1rem; border-top: 1px solid #eee; display: flex; gap: 0.5rem;">
+                <input type="text" id="modalMensajeInput" placeholder="Escribí tu mensaje..." style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px;">
+                <button id="modalEnviarBtn" class="btn btn-primary" style="background-color: #3498db; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer;">Enviar</button>
             </div>
         </div>
     `;
@@ -854,9 +1027,7 @@ function abrirModalMensaje(productoId, productoNombre, vendedor) {
     
     marcarConversacionComoLeida(conversacionId, vendedor);
     
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        modal.remove();
-    });
+    modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
     
     const enviarBtn = modal.querySelector('#modalEnviarBtn');
     const input = modal.querySelector('#modalMensajeInput');
@@ -886,9 +1057,11 @@ function abrirModalMensaje(productoId, productoNombre, vendedor) {
         
         const body = modal.querySelector('#modalMensajesBody');
         const nuevoMensajeHtml = `
-            <div class="mensaje-propio" style="margin: 0.5rem 0; margin-left: auto;">
-                <small style="font-size: 0.7rem; color: #ddd;">${usuarioActual.nombre} - ${new Date().toLocaleString()}</small>
-                <p style="margin: 0.3rem 0 0 0;">${escapeHtml(texto)}</p>
+            <div style="margin: 0.5rem 0; text-align: right;">
+                <div style="display: inline-block; max-width: 80%; padding: 0.5rem 1rem; border-radius: 18px; background: #3498db; color: white;">
+                    <small style="font-size: 0.7rem; color: #ddd;">${usuarioActual.nombre} - ${new Date().toLocaleString()}</small>
+                    <p style="margin: 0.3rem 0 0 0;">${escapeHtml(texto)}</p>
+                </div>
             </div>
         `;
         
@@ -970,13 +1143,13 @@ function cargarMensajesPage() {
     conversacionesArray.sort((a, b) => new Date(b.ultimaFecha) - new Date(a.ultimaFecha));
     
     contenedor.innerHTML = conversacionesArray.map(conv => `
-        <div class="conversacion-card ${conv.noLeidos > 0 ? 'no-leido' : ''}" data-producto-id="${conv.productoId}" data-producto-nombre="${conv.productoNombre}" data-otro-usuario="${conv.otroUsuario}">
-            <div class="conversacion-info">
-                <div class="conversacion-producto">👕 ${escapeHtml(conv.productoNombre)}</div>
-                <div class="conversacion-ultimo">💬 ${escapeHtml(conv.otroUsuario)}: ${escapeHtml(conv.ultimoMensaje.substring(0, 50))}${conv.ultimoMensaje.length > 50 ? '...' : ''}</div>
-                <div class="conversacion-fecha">${new Date(conv.ultimaFecha).toLocaleString()}</div>
+        <div class="conversacion-card" style="background: white; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; ${conv.noLeidos > 0 ? 'border-left: 4px solid #3498db; background: #e8f4fd;' : ''}" data-producto-id="${conv.productoId}" data-producto-nombre="${conv.productoNombre}" data-otro-usuario="${conv.otroUsuario}">
+            <div style="flex: 1;">
+                <div style="font-weight: bold; margin-bottom: 0.3rem;">👕 ${escapeHtml(conv.productoNombre)}</div>
+                <div style="font-size: 0.85rem; color: #666;">💬 ${escapeHtml(conv.otroUsuario)}: ${escapeHtml(conv.ultimoMensaje.substring(0, 50))}${conv.ultimoMensaje.length > 50 ? '...' : ''}</div>
+                <div style="font-size: 0.75rem; color: #999;">${new Date(conv.ultimaFecha).toLocaleString()}</div>
             </div>
-            ${conv.noLeidos > 0 ? `<div class="conversacion-estado">${conv.noLeidos}</div>` : ''}
+            ${conv.noLeidos > 0 ? `<div style="background-color: #e74c3c; color: white; border-radius: 50%; padding: 0.2rem 0.5rem; font-size: 0.7rem; font-weight: bold;">${conv.noLeidos}</div>` : ''}
         </div>
     `).join('');
     

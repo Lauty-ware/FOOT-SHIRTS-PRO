@@ -1,3 +1,33 @@
+/* ========== VARIABLES (Modo Claro por defecto) ========== */
+:root {
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --text-primary: #1a1a2e;
+    --text-secondary: #666666;
+    --navbar-bg: #1a1a2e;
+    --navbar-text: #ffffff;
+    --card-bg: #ffffff;
+    --border-color: #eeeeee;
+    --input-bg: #ffffff;
+    --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    --hover-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ========== MODO OSCURO ========== */
+body.dark-mode {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --navbar-bg: #0f0f1a;
+    --navbar-text: #ffffff;
+    --card-bg: #1e2a3a;
+    --border-color: #2d3a4a;
+    --input-bg: #2d3a4a;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --hover-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,8 +36,9 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background-color: #f5f5f5;
-    color: #1a1a2e;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -16,12 +47,30 @@ body {
     padding: 20px;
 }
 
+/* ========== BOTÓN MODO OSCURO ========== */
+.dark-mode-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s;
+    color: var(--navbar-text);
+}
+
+.dark-mode-btn:hover {
+    transform: scale(1.1);
+    background-color: rgba(255,255,255,0.1);
+}
+
 /* Navbar */
 .navbar {
-    background-color: #1a1a2e;
+    background-color: var(--navbar-bg);
     padding: 1rem 0;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
+    transition: background-color 0.3s ease;
 }
 
 .nav-container {
@@ -37,16 +86,18 @@ body {
 
 .logo h2 {
     font-size: 1.2rem;
-    color: white;
+    color: var(--navbar-text);
 }
 
 .nav-links {
     display: flex;
     gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .nav-link {
-    color: white;
+    color: var(--navbar-text);
     text-decoration: none;
     padding: 0.5rem 1rem;
     border-radius: 8px;
@@ -54,27 +105,75 @@ body {
 }
 
 .nav-link:hover {
-    background-color: #2d2d44;
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* ========== CALIFICACIÓN CON ESTRELLAS ========== */
+.stars-container {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0.5rem 0;
+}
+
+.star {
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #ddd;
+    transition: color 0.2s;
+}
+
+.star.active,
+.star:hover,
+.star:hover ~ .star {
+    color: #ffc107;
+}
+
+.star.rating-static {
+    cursor: default;
+}
+
+.star.rating-static.active {
+    color: #ffc107;
+}
+
+.promedio-estrellas {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(255,193,7,0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+}
+
+.promedio-numero {
+    font-weight: bold;
+    color: #ffc107;
+}
+
+.cantidad-opiniones {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
 }
 
 /* Login/Registro box */
 .login-box {
     max-width: 400px;
     margin: 100px auto;
-    background: white;
+    background: var(--card-bg);
     padding: 2rem;
     border-radius: 16px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
     text-align: center;
 }
 
 .login-box h1 {
     margin-bottom: 0.5rem;
-    color: #1a1a2e;
+    color: var(--text-primary);
 }
 
 .login-box p {
-    color: #666;
+    color: var(--text-secondary);
 }
 
 /* Formularios */
@@ -86,17 +185,19 @@ body {
 .form-group textarea {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
 }
 
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .form-group textarea {
@@ -142,16 +243,16 @@ body {
 }
 
 .producto-card {
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .producto-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: var(--hover-shadow);
 }
 
 .producto-imagen {
@@ -161,6 +262,13 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 4rem;
+    overflow: hidden;
+}
+
+.producto-imagen img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .producto-info {
@@ -171,7 +279,7 @@ body {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #1a1a2e;
+    color: var(--text-primary);
 }
 
 .producto-precio {
@@ -179,6 +287,30 @@ body {
     font-weight: bold;
     color: #f39c12;
     margin: 0.5rem 0;
+}
+
+.producto-etiquetas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.etiqueta {
+    display: inline-block;
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.etiqueta:hover {
+    background-color: #f39c12;
+    color: white;
+    cursor: pointer;
 }
 
 .producto-estado {
@@ -198,8 +330,8 @@ body {
 .btn-ver {
     display: block;
     text-align: center;
-    background-color: #1a1a2e;
-    color: white;
+    background-color: var(--navbar-bg);
+    color: var(--navbar-text);
     text-decoration: none;
     padding: 0.5rem;
     border-radius: 8px;
@@ -207,35 +339,74 @@ body {
 }
 
 .btn-ver:hover {
-    background-color: #2d2d44;
+    opacity: 0.9;
+}
+
+/* Vendedor info */
+.vendedor-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.vendedor-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #f39c12;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    overflow: hidden;
+}
+
+.vendedor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vendedor-nombre {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.vendedor-nombre strong {
+    color: var(--text-primary);
 }
 
 /* Perfil */
 .perfil-header {
-    background: white;
+    background: var(--card-bg);
     padding: 2rem;
     border-radius: 12px;
     display: flex;
     align-items: center;
     gap: 2rem;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
+    flex-wrap: wrap;
 }
 
 .avatar {
+    position: relative;
+    cursor: pointer;
+}
+
+.avatar img {
     width: 80px;
     height: 80px;
-    background: #f39c12;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
+    object-fit: cover;
 }
 
 /* Mensajes */
 .mensaje {
-    background: #f8f9fa;
+    background: var(--card-bg);
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
@@ -247,27 +418,21 @@ body {
     justify-content: space-between;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 /* Utilidades */
-h2 {
-    margin-bottom: 1rem;
-    color: #1a1a2e;
-}
-
-h3 {
-    margin: 1.5rem 0 1rem;
-    color: #1a1a2e;
+h2, h3 {
+    color: var(--text-primary);
 }
 
 .formulario {
     max-width: 600px;
     margin: 0 auto;
-    background: white;
+    background: var(--card-bg);
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
 }
 
 .formulario h2 {
@@ -279,18 +444,15 @@ h3 {
     text-align: center;
 }
 
-/* ========== NUEVAS CLASES (solo para filtros y etiquetas) ========== */
-
-/* Contenedor de filtros */
+/* Filtros */
 .filtros-container {
-    background: white;
+    background: var(--card-bg);
     padding: 1.5rem;
     border-radius: 12px;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
 }
 
-/* Caja de búsqueda */
 .busqueda-box {
     margin-bottom: 1.5rem;
 }
@@ -298,12 +460,13 @@ h3 {
 .search-input {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
 }
 
-/* Filtros en fila */
 .filtros-box {
     display: flex;
     flex-wrap: wrap;
@@ -321,74 +484,20 @@ h3 {
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
     font-weight: 500;
-    color: #555;
+    color: var(--text-secondary);
 }
 
 .filtro-input, .filtro-select {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.9rem;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
 }
 
-/* Etiquetas (chips) */
-.producto-etiquetas {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 0.5rem 0;
-}
-
-.etiqueta {
-    display: inline-block;
-    background-color: #f0f0f0;
-    color: #555;
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.etiqueta:hover {
-    background-color: #f39c12;
-    color: white;
-    cursor: pointer;
-}
-/* ========== ESTILOS PARA IMÁGENES ========== */
-
-/* Zona de drop para imagen */
-#dropZone {
-    transition: all 0.3s ease;
-}
-
-#dropZone.drag-over {
-    border-color: #f39c12;
-    background-color: #fef9e6;
-}
-
-/* Imagen de producto */
-.producto-imagen img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.imagen-preview {
-    max-width: 100%;
-    max-height: 150px;
-    border-radius: 8px;
-}
-
-.imagen-detalle {
-    max-width: 100%;
-    max-height: 300px;
-    border-radius: 12px;
-    object-fit: contain;
-}
-/* ========== ESTILOS PARA MENSAJES Y CONVERSACIONES ========== */
-
+/* Conversaciones */
 .conversaciones-container {
     display: flex;
     flex-direction: column;
@@ -396,12 +505,12 @@ h3 {
 }
 
 .conversacion-card {
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     padding: 1rem;
     cursor: pointer;
     transition: all 0.3s;
-    border: 1px solid #eee;
+    border: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -409,12 +518,12 @@ h3 {
 
 .conversacion-card:hover {
     transform: translateX(5px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
     border-color: #f39c12;
 }
 
 .conversacion-card.no-leido {
-    background: #e8f4fd;
+    background: rgba(52,152,219,0.1);
     border-left: 4px solid #3498db;
 }
 
@@ -424,18 +533,18 @@ h3 {
 
 .conversacion-producto {
     font-weight: bold;
-    color: #1a1a2e;
+    color: var(--text-primary);
     margin-bottom: 0.3rem;
 }
 
 .conversacion-ultimo {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .conversacion-fecha {
     font-size: 0.75rem;
-    color: #999;
+    color: var(--text-secondary);
 }
 
 .conversacion-estado {
@@ -449,7 +558,7 @@ h3 {
     text-align: center;
 }
 
-/* Modal de conversación */
+/* Modal */
 .modal {
     display: none;
     position: fixed;
@@ -464,7 +573,7 @@ h3 {
 }
 
 .modal-content {
-    background: white;
+    background: var(--card-bg);
     border-radius: 16px;
     width: 90%;
     max-width: 600px;
@@ -476,7 +585,7 @@ h3 {
 
 .modal-header {
     padding: 1rem;
-    background: #1a1a2e;
+    background: var(--navbar-bg);
     color: white;
     display: flex;
     justify-content: space-between;
@@ -505,7 +614,7 @@ h3 {
 
 .modal-footer {
     padding: 1rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
     display: flex;
     gap: 0.5rem;
 }
@@ -513,8 +622,10 @@ h3 {
 .modal-footer input {
     flex: 1;
     padding: 0.8rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
 }
 
 .mensaje-propio {
@@ -529,53 +640,10 @@ h3 {
 }
 
 .mensaje-otro {
-    background: #f0f0f0;
-    color: #333;
+    background: var(--border-color);
+    color: var(--text-primary);
     padding: 0.5rem 1rem;
     border-radius: 18px;
     margin: 0.5rem 0;
     max-width: 80%;
-}
-/* ========== ESTILOS PARA FOTO DE PERFIL ========== */
-
-.avatar {
-    position: relative;
-    cursor: pointer;
-}
-
-.avatar img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.vendedor-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid #eee;
-}
-
-.vendedor-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #f39c12;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-}
-
-.vendedor-nombre {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-.vendedor-nombre strong {
-    color: #1a1a2e;
 }
