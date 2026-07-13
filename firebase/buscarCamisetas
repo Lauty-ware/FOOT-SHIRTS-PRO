@@ -1,0 +1,28 @@
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from './firebase-config';
+
+async function buscarCamisetas(termino) {
+  try {
+    // Buscar por título (necesitarías un índice en Firestore)
+    const q = query(
+      collection(db, "publicaciones"),
+      where("titulo", ">=", termino),
+      where("titulo", "<=", termino + '\uf8ff')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const resultados = [];
+    
+    querySnapshot.forEach((doc) => {
+      resultados.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return resultados;
+  } catch (error) {
+    console.error("Error en la búsqueda:", error.message);
+    throw error;
+  }
+}

@@ -1,0 +1,18 @@
+[debug] [2026-04-08T23:23:21.583Z] ----------------------------------------------------------------------
+[debug] [2026-04-08T23:23:21.587Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Usuario\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2026-04-08T23:23:21.587Z] CLI Version:   15.13.0
+[debug] [2026-04-08T23:23:21.587Z] Platform:      win32
+[debug] [2026-04-08T23:23:21.588Z] Node Version:  v22.18.0
+[debug] [2026-04-08T23:23:21.588Z] Time:          Wed Apr 08 2026 20:23:21 GMT-0300 (hora estándar de Argentina)
+[debug] [2026-04-08T23:23:21.588Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Usuario\Documents\FOOT SHIRTS PRO
